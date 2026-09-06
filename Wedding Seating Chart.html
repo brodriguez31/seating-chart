@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Find Your Seat — Rhonnie &amp; Bryan</title>
+<style>
+  :root{
+    --cream:#FAF6EF; --card:#FFFFFF; --line:#E5DECF; --ink:#2E2B26; --ink-soft:#6B6558;
+    --sage:#7B2D42; --sage-dark:#5C1F30; --sage-light:#F1E0E3; --coral:#C97B63; --pink:#C46E93; --gold:#C9A227;
+    --gray:#A79E93; --gray-dark:#8B8074; --gray-light:#EDE9E3; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--cream); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    min-height:100vh; display:flex; justify-content:center;
+  }
+  .wrap{ width:100%; max-width:440px; padding:32px 20px 60px; }
+  .heading{ text-align:center; margin-bottom:28px; }
+  .heading .names{
+    font-family:Georgia,'Times New Roman',serif; font-size:24px; color:var(--sage);
+    margin:0 0 4px; line-height:1.25;
+  }
+  .heading .tagline{
+    font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:15px;
+    color:var(--sage); margin:0 0 12px;
+  }
+  .heading .date{ font-size:13px; color:var(--sage); letter-spacing:0.03em; margin:0 0 18px; }
+  .heading .prompt{ font-size:15px; color:var(--sage); margin:0; }
+  .divider{
+    width:46px; height:2px; background:var(--gold); margin:14px auto; opacity:0.6;
+  }
+
+  .search-box{ position:relative; margin-bottom:6px; }
+  .search-box input{
+    width:100%; font-size:17px; padding:14px 16px; border-radius:12px;
+    border:1.5px solid var(--line); background:var(--card); color:var(--ink);
+    outline:none; font-family:inherit;
+  }
+  .search-box input:focus{ border-color:var(--sage); }
+
+  .results{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+  .result-row{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:13px 16px; font-size:16px; cursor:pointer; display:flex;
+    justify-content:space-between; align-items:center;
+  }
+  .result-row:active{ background:var(--sage-light); }
+  .result-row .arrow{ color:var(--ink-soft); font-size:14px; }
+
+  .no-match{
+    text-align:center; color:var(--ink-soft); font-size:14.5px; padding:22px 10px;
+    line-height:1.5;
+  }
+  .hint{
+    text-align:center; color:var(--ink-soft); font-size:13px; margin-top:18px; line-height:1.5;
+  }
+
+  .result-card{
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:32px 24px; text-align:center; margin-top:8px;
+  }
+  .result-card .guest-name{ font-size:15px; color:var(--ink-soft); margin:0 0 4px; }
+  .result-card .table-num{
+    font-family:Georgia,serif; font-size:52px; font-weight:700; color:var(--ink);
+    margin:6px 0 8px; line-height:1;
+  }
+  .result-card .table-side{
+    display:inline-block; font-size:13px; font-weight:600; letter-spacing:0.03em;
+    text-transform:uppercase; color:var(--sage); background:var(--sage-light);
+    padding:5px 14px; border-radius:20px; margin-bottom:4px;
+  }
+  .result-card .not-seated{ font-size:15.5px; color:var(--ink-soft); line-height:1.6; margin-top:8px; }
+  .back-btn{
+    display:block; width:100%; margin-top:18px; padding:13px; border-radius:10px;
+    border:1.5px solid var(--line); background:transparent; color:var(--sage);
+    font-size:15px; font-family:inherit; cursor:pointer; font-weight:600;
+  }
+  .back-btn:active{ background:var(--sage-light); }
+
+  #searchScreen.hidden, #resultScreen.hidden, #searchTab.hidden, #mapTab.hidden{ display:none; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:22px; }
+  .tab-btn{
+    flex:1; padding:11px 6px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--card); font-size:14px; font-family:inherit; color:var(--sage);
+    cursor:pointer; font-weight:600;
+  }
+  .tab-btn.active{ background:var(--sage); color:#fff; border-color:var(--sage); font-weight:600; }
+
+  .map-head{
+    background:var(--sage-light); border:1.5px solid var(--sage); border-radius:12px;
+    text-align:center; padding:12px; font-family:Georgia,serif; font-size:15px;
+  }
+  .map-head .map-sub{
+    font-family:-apple-system,sans-serif; font-size:10.5px; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:0.05em; margin-top:1px;
+  }
+  .map-note{ text-align:center; font-size:12.5px; color:var(--ink-soft); margin-top:14px; line-height:1.5; }
+
+  .chart-container{ position:relative; width:100%; aspect-ratio:700/760; }
+  .table-rect{ position:absolute; border-radius:6px; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.02); }
+  .table-divider{ position:absolute; background:rgba(0,0,0,0.16); }
+  .t-head{ background:var(--gray-light); border:1px solid var(--gray); }
+  .t-arm{ background:var(--sage-light); border:1px solid var(--sage); }
+  .region-label{
+    position:absolute; font-size:10px; font-weight:700; color:var(--ink-soft);
+    text-align:center; transform:translateX(-50%); white-space:nowrap;
+  }
+  .seat{
+    position:absolute; width:19px; height:19px; border-radius:50%;
+    transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
+    font-size:7.5px; font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,0.08); cursor:pointer;
+  }
+  .seat.filled{ border:1.5px solid rgba(255,255,255,0.5); color:var(--white); }
+  .seat.filled.head{ background:var(--gray-dark); }
+  .seat.filled.arm{ background:var(--sage-dark); }
+  .seat.groom{ background:var(--coral); font-size:7px; }
+  .seat.bride{ background:var(--pink); font-size:7px; }
+  .seat.highlight{
+    background:var(--coral) !important; box-shadow:0 0 0 5px rgba(201,123,99,0.3),0 2px 4px rgba(0,0,0,0.25);
+    transform:translate(-50%,-50%) scale(1.6); z-index:3;
+  }
+  .chart-table-badge{
+    position:absolute; transform:translate(-50%,-50%);
+    width:22px; height:22px; border-radius:7px;
+    background:rgba(255,255,255,0.92); border:1px solid rgba(0,0,0,0.08);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; color:var(--ink);
+    pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,0.06);
+  }
+  .seat-tooltip{
+    position:absolute; transform:translate(-50%,-135%);
+    background:var(--ink); color:#fff; font-size:11.5px; font-weight:600;
+    padding:5px 10px; border-radius:6px; white-space:nowrap;
+    pointer-events:none; opacity:0; transition:opacity 0.12s ease; z-index:10;
+  }
+  .seat-tooltip.visible{ opacity:1; }
+  .seat-tooltip::after{
+    content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+    border:5px solid transparent; border-top-color:var(--ink);
+  }
+  .chart-legend{
+    display:flex; justify-content:center; gap:16px; font-size:11.5px; color:var(--ink-soft);
+    margin-top:12px;
+  }
+  .chart-legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .chart-legend .dot{ width:10px; height:10px; border-radius:50%; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="heading">
+    <p class="names">Rhonnie &amp; Bryan's Wedding Dinner</p>
+    <p class="tagline">First we dine, then we whine!</p>
+    <p class="date">September 13, 2026</p>
+    <div class="divider"></div>
+    <p class="prompt">Find your seat below</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabSearchBtn">Find My Seat</button>
+    <button class="tab-btn" id="tabMapBtn">Table Map</button>
+  </div>
+
+  <div id="searchTab">
+    <div id="searchScreen">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Type your first or last name..." autocomplete="off" autocapitalize="words">
+      </div>
+      <div class="results" id="results"></div>
+      <p class="hint">Trouble finding your name? Ask a member of the wedding party for help.</p>
+    </div>
+
+    <div id="resultScreen" class="hidden">
+      <div class="result-card" id="resultCard"></div>
+      <button class="back-btn" id="backBtn">&larr; Search again</button>
+    </div>
+  </div>
+
+  <div id="mapTab" class="hidden">
+    <div class="map-head">Rhonnie &amp; Bryan's Reception<div class="map-sub">Overall table layout</div></div>
+    <div class="chart-container" id="chartContainer"></div>
+    <div class="chart-legend">
+      <span><span class="dot" style="background:var(--gray-dark);"></span>Head table</span>
+      <span><span class="dot" style="background:var(--sage-dark);"></span>Guest tables</span>
+      <span><span class="dot" style="background:var(--coral);"></span>Your seat</span>
+    </div>
+    <p class="map-note">Find your name under "Find My Seat" first — your exact seat will be highlighted here.</p>
+  </div>
+</div>
+
+<script>
+  // ---- Guest + seat data (kept in sync with the master seating chart) ----
+  const GUESTS = [
+    {id:"g3",name:"Shahmar Beasley"},{id:"g4",name:"Doriean Jackson"},
+    {id:"g5",name:"Carol Borchers"},{id:"g6",name:"Chuck Borchers"},
+    {id:"g7",name:"Claire Boudreau"},{id:"g8",name:"Samuel Chaffin"},
+    {id:"g9",name:"Olivia Harrington"},{id:"g10",name:"Cortne' Clark"},
+    {id:"g11",name:"Jonathan Cruz"},{id:"g12",name:"Kay-Ann Cruz"},
+    {id:"g13",name:"Leila Cupersmith"},{id:"g14",name:"Purabi Das"},
+    {id:"g15",name:"Veronica Hurtado"},{id:"g16",name:"Nina Dowlatkhah"},
+    {id:"g17",name:"Jose Hugo"},{id:"g18",name:"Jalal Elatfi"},
+    {id:"g19",name:"Opal Elatfi"},{id:"g20",name:"Rhonnie Elliott"},
+    {id:"g21",name:"Bryan Rodriguez"},{id:"g22",name:"Richard Elliott"},
+    {id:"g23",name:"Shannon Elliott"},{id:"g24",name:"Taylor Hodges"},
+    {id:"g25",name:"Fernando Fernandez"},{id:"g26",name:"Katherine Gaard"},
+    {id:"g27",name:"Liam Plambeck"},{id:"g28",name:"Leah Gittens"},
+    {id:"g29",name:"Patricia Henry"},{id:"g30",name:"Elizabeth Howe"},
+    {id:"g31",name:"Kenny Johnson"},{id:"g32",name:"Ahmad Jones"},
+    {id:"g33",name:"Khalil Jones"},{id:"g34",name:"Makensie Moore"},
+    {id:"g35",name:"Nicci Kang"},{id:"g36",name:"Cole Johnson"},
+    {id:"g37",name:"Bobby Kong-Quee"},{id:"g38",name:"Norma Kong-Quee"},
+    {id:"g39",name:"Robert Kong-Quee"},{id:"g40",name:"Rochelle Kong-Quee"},
+    {id:"g41",name:"William Weston"},{id:"g42",name:"Claire Leone"},
+    {id:"g43",name:"Juan Jimenez Jimenez"},{id:"g44",name:"Dan Leone"},
+    {id:"g45",name:"Luz Loeb"},{id:"g46",name:"Hailey Lyew"},
+    {id:"g47",name:"Barrington Lynch"},{id:"g48",name:"Aaron McLean"},
+    {id:"g49",name:"Estefania Mesa"},{id:"g50",name:"Chantal Narez"},
+    {id:"g51",name:"Kason Banuelos"},{id:"g52",name:"Ravi Patel"},
+    {id:"g53",name:"Alanis Quintero"},{id:"g54",name:"Andrea Reid"},
+    {id:"g55",name:"Fred"},{id:"g56",name:"Rick Robles"},
+    {id:"g57",name:"Kathy Aviles-Robles"},{id:"g58",name:"Wayne McLean"},
+    {id:"g59",name:"Anthony Rodriguez"},{id:"g60",name:"Aurora Rodriguez"},
+    {id:"g61",name:"Bianca Rodriguez"},{id:"g62",name:"Fernando Rodriguez"},
+    {id:"g63",name:"Turquoise Fuller"},{id:"g64",name:"Fred Rodriguez"},
+    {id:"g65",name:"Carmen Rodriguez"},{id:"g66",name:"Johanna Rodriguez"},
+    {id:"g67",name:"Juan Rodriguez"},{id:"g68",name:"Jose Rodriguez"},
+    {id:"g69",name:"Josh Rodriguez"},{id:"g70",name:"Noely Macias"},
+    {id:"g71",name:"Gem Ross"},{id:"g72",name:"Nicolas Rubino"},
+    {id:"g74",name:"Devin Salmon"},
+    {id:"g75",name:"Justin Santiago"},{id:"g76",name:"Bionca Santiago"},
+    {id:"g77",name:"Amila Shake"},{id:"g78",name:"Brandht Tulloch"},
+    {id:"g79",name:"Gilmore Tulloch"},{id:"g80",name:"Michelle Vaughn"},
+    {id:"g81",name:"Tony Vaughn"},{id:"g82",name:"Angel Velazquez"},
+    {id:"g83",name:"Maria Scotto"},{id:"g84",name:"Pauline Wallace"},
+    {id:"g85",name:"Deja Wallace"},{id:"g86",name:"Christina Williams"},
+    {id:"g87",name:"Leonard"},{id:"g88",name:"Michele Williams Castillo"}
+  ];
+
+  const ASSIGNMENTS = {
+    h0:'g13', h1:'g60', h2:'g61',
+    h3:'g45', h4:'g68', h5:'g69',
+    h6:'g44',
+    h9:'g28', h10:'g23', h11:'g5',
+    h12:'g6', h13:'g80', h14:'g81',
+    hEndL:'g74', hEndR:'g77',
+
+    aLW0:'g31', aLW1:'g76', aLW2:'g75',
+    aLE0:'g72', aLE1:'g83', aLE2:'g82',
+    aLW3:'g67', aLW4:'g66', aLW5:'g47',
+    aLE3:'g64', aLE4:'g65', aLE5:'g52',
+    aLW6:'g59', aLW7:'g11', aLW8:'g12',
+    aLE6:'g18', aLE7:'g19', aLE8:'g62',
+    aLW9:'g57', aLW10:'g56', aLW11:'g25',
+    aLE9:'g63', aLE10:'g32', aLE11:'g33',
+    aLW12:'g30', aLW13:'g7', aLW14:'g50',
+    aLE12:'g34', aLE13:'g70', aLE14:'g51',
+    aLW15:'g4',
+    aLE15:'g3',
+
+    aRW9:'g54', aRW10:'g55', aRW11:'g71',
+    aRE0:'g16', aRE1:'g17', aRE2:'g87',
+    aRW0:'g35', aRW1:'g36', aRW2:'g49',
+    aRE3:'g86', aRE4:'g22', aRE5:'g37',
+    aRW3:'g88', aRW4:'g48', aRW5:'g58',
+    aRE6:'g40', aRE7:'g41', aRE8:'g46',
+    aRW6:'g29', aRW7:'g84', aRW8:'g85',
+    aRE9:'g38', aRE10:'g39', aRE11:'g10',
+    aRW12:'g42', aRW13:'g43', aRW14:'g8',
+    aRE12:'g14', aRE13:'g15', aRE14:'g27',
+    aRW15:'g9',
+    aRE15:'g26', aRE16:'g53'
+  };
+
+  // ---- Build guestId -> seat info lookup ----
+  function seatInfo(seatId){
+    if(seatId==='hEndL' || seatId==='hEndR' || /^h\d+$/.test(seatId)){
+      return {table:1, side:'Head table'};
+    }
+    if(seatId==='extra1'){
+      return {table:2, side:'Left side'};
+    }
+    const m = seatId.match(/^a(L|R)(W|E)(\d+)$/);
+    if(m){
+      const armSide = m[1]; // L or R
+      const idx = parseInt(m[3],10);
+      const group = Math.floor(idx/6); // 0,1,2
+      const tableNum = armSide==='L' ? [2,4,6][group] : [3,5,7][group];
+      const sideLabel = armSide==='L' ? 'Left side' : 'Right side';
+      return {table:tableNum, side:sideLabel};
+    }
+    return null;
+  }
+
+  const GUEST_SEAT = {};
+  Object.keys(ASSIGNMENTS).forEach(seatId=>{
+    const gId = ASSIGNMENTS[seatId];
+    GUEST_SEAT[gId] = seatInfo(seatId);
+  });
+
+  const SEAT_OF_GUEST = {};
+  Object.keys(ASSIGNMENTS).forEach(seatId=>{ SEAT_OF_GUEST[ASSIGNMENTS[seatId]] = seatId; });
+
+  const GUEST_MAP = {};
+  GUESTS.forEach(g=>{ GUEST_MAP[g.id] = g; });
+
+  // ---- Seat-level chart (ported read-only from the master seating chart tool) ----
+  const CANVAS_W=760, CANVAS_H=1150;
+  const HEAD_SEG=135, ARM_ROW=155, TABLE_DEPTH=52, HEAD_N=5, ARM_N=6;
+  const headW=HEAD_N*HEAD_SEG, headX=(CANVAS_W-headW)/2, headY=110, headH=44;
+  const armW=TABLE_DEPTH, armH=ARM_N*ARM_ROW, armY=headY+headH;
+  const armLX=headX, armRX=headX+headW-armW;
+
+  const chartTables=[
+    {x:headX,y:headY,w:headW,h:headH,cls:'t-head'},
+    {x:armLX,y:armY,w:armW,h:armH,cls:'t-arm'},
+    {x:armRX,y:armY,w:armW,h:armH,cls:'t-arm'}
+  ];
+
+  const chartSeats=[];
+  for(let i=0;i<15;i++){
+    const x=headX+(headW/15)*(i+0.5), y=headY-26;
+    if(i===7) chartSeats.push({id:'groom',x,y,kind:'groom',region:'head'});
+    else if(i===8) chartSeats.push({id:'bride',x,y,kind:'bride',region:'head'});
+    else chartSeats.push({id:'h'+i,x,y,kind:'guest',region:'head'});
+  }
+  chartSeats.push({id:'hEndL',x:headX-26,y:headY+headH/2,kind:'guest',region:'head'});
+  chartSeats.push({id:'hEndR',x:headX+headW+26,y:headY+headH/2,kind:'guest',region:'head'});
+
+  function armChartSeats(prefix,xWest,xEast){
+    for(let i=0;i<18;i++){
+      const y=armY+(armH/18)*(i+0.5);
+      chartSeats.push({id:prefix+'W'+i,x:xWest,y,kind:'guest',region:'arm'});
+      chartSeats.push({id:prefix+'E'+i,x:xEast,y,kind:'guest',region:'arm'});
+    }
+  }
+  armChartSeats('aL',armLX-26,armLX+armW+26);
+  armChartSeats('aR',armRX-26,armRX+armW+26);
+  chartSeats.push({id:'extra1',x:armLX+armW/2,y:armY+armH+26,kind:'guest',region:'arm'});
+
+  function seatInitials(name){
+    const parts = name.trim().split(/\s+/);
+    if(parts.length===1) return parts[0].slice(0,2);
+    return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
+  }
+
+  const chartContainer = document.getElementById('chartContainer');
+  let chartBuilt = false;
+
+  function addChartDivider(x1,y1,x2,y2){
+    const d=document.createElement('div');
+    d.className='table-divider';
+    if(x1===x2){
+      d.style.left=(x1/CANVAS_W*100)+'%';
+      d.style.top=(Math.min(y1,y2)/CANVAS_H*100)+'%';
+      d.style.width='1px';
+      d.style.height=(Math.abs(y2-y1)/CANVAS_H*100)+'%';
+    }else{
+      d.style.top=(y1/CANVAS_H*100)+'%';
+      d.style.left=(Math.min(x1,x2)/CANVAS_W*100)+'%';
+      d.style.height='1px';
+      d.style.width=(Math.abs(x2-x1)/CANVAS_W*100)+'%';
+    }
+    chartContainer.appendChild(d);
+  }
+
+  function buildGuestChart(){
+    chartContainer.innerHTML='';
+    chartTables.forEach(t=>{
+      const d=document.createElement('div');
+      d.className='table-rect '+t.cls;
+      d.style.left=(t.x/CANVAS_W*100)+'%';
+      d.style.top=(t.y/CANVAS_H*100)+'%';
+      d.style.width=(t.w/CANVAS_W*100)+'%';
+      d.style.height=(t.h/CANVAS_H*100)+'%';
+      chartContainer.appendChild(d);
+    });
+    for(let k=1;k<HEAD_N;k++){
+      const x=headX+k*HEAD_SEG;
+      addChartDivider(x,headY,x,headY+headH);
+    }
+    for(let k=1;k<ARM_N;k++){
+      const y=armY+k*ARM_ROW;
+      addChartDivider(armLX,y,armLX+armW,y);
+      addChartDivider(armRX,y,armRX+armW,y);
+    }
+    function addNum(text,x,y){
+      const d=document.createElement('div');
+      d.className='chart-table-badge';
+      d.style.left=(x/CANVAS_W*100)+'%';
+      d.style.top=(y/CANVAS_H*100)+'%';
+      d.textContent=text;
+      chartContainer.appendChild(d);
+    }
+    addNum('1', headX+headW/2, headY+headH/2);
+    const leftNums=[2,4,6], rightNums=[3,5,7];
+    for(let m=0;m<3;m++){
+      const yMid = armY + ARM_ROW*(2*m+1);
+      addNum(String(leftNums[m]), armLX+armW/2, yMid);
+      addNum(String(rightNums[m]), armRX+armW/2, yMid);
+    }
+    [
+      {text:'Left side',x:armLX+armW/2,y:armY+armH+50},
+      {text:'Right side',x:armRX+armW/2,y:armY+armH+50}
+    ].forEach(l=>{
+      const d=document.createElement('div');
+      d.className='region-label';
+      d.style.left=(l.x/CANVAS_W*100)+'%';
+      d.style.top=(l.y/CANVAS_H*100)+'%';
+      d.textContent=l.text;
+      chartContainer.appendChild(d);
+    });
+    chartSeats.forEach(s=>{
+      const d=document.createElement('div');
+      d.dataset.id=s.id;
+      d.addEventListener('mouseenter', ()=>showSeatTooltip(s));
+      d.addEventListener('mouseleave', ()=>hideSeatTooltip());
+      d.addEventListener('click', (e)=>{ e.stopPropagation(); toggleSeatTooltip(s); });
+      chartContainer.appendChild(d);
+    });
+    tooltipEl = document.createElement('div');
+    tooltipEl.className = 'seat-tooltip';
+    chartContainer.appendChild(tooltipEl);
+    renderGuestSeats();
+    chartBuilt = true;
+  }
+
+  let tooltipEl = null;
+  let activeTooltipSeatId = null;
+
+  function guestNameForSeat(s){
+    if(s.kind==='groom') return 'Groom';
+    if(s.kind==='bride') return 'Bride';
+    const guestId = ASSIGNMENTS[s.id];
+    if(guestId && GUEST_MAP[guestId]) return GUEST_MAP[guestId].name;
+    return 'Open seat';
+  }
+
+  function showSeatTooltip(s){
+    if(!tooltipEl) return;
+    tooltipEl.textContent = guestNameForSeat(s);
+    tooltipEl.style.left = (s.x/CANVAS_W*100)+'%';
+    tooltipEl.style.top = (s.y/CANVAS_H*100)+'%';
+    tooltipEl.classList.add('visible');
+  }
+  function hideSeatTooltip(){
+    if(tooltipEl) tooltipEl.classList.remove('visible');
+    activeTooltipSeatId = null;
+  }
+  function toggleSeatTooltip(s){
+    if(activeTooltipSeatId === s.id){ hideSeatTooltip(); return; }
+    showSeatTooltip(s);
+    activeTooltipSeatId = s.id;
+  }
+  document.addEventListener('click', ()=>hideSeatTooltip());
+
+  function renderGuestSeats(){
+    chartSeats.forEach(s=>{
+      const el=chartContainer.querySelector('[data-id="'+s.id+'"]');
+      if(!el) return;
+      el.style.left=(s.x/CANVAS_W*100)+'%';
+      el.style.top=(s.y/CANVAS_H*100)+'%';
+      el.className='seat';
+      el.style.display='';
+      if(s.kind==='groom'||s.kind==='bride'){
+        el.classList.add(s.kind);
+        el.textContent=s.kind==='groom'?'G':'B';
+        return;
+      }
+      const guestId=ASSIGNMENTS[s.id];
+      if(guestId && GUEST_MAP[guestId]){
+        el.classList.add('filled',s.region);
+        el.textContent=seatInitials(GUEST_MAP[guestId].name);
+      }else{
+        el.style.display='none';
+        return;
+      }
+      if(lastFoundSeatId===s.id) el.classList.add('highlight');
+    });
+  }
+
+  const searchInput = document.getElementById('searchInput');
+  const resultsEl = document.getElementById('results');
+  const searchScreen = document.getElementById('searchScreen');
+  const resultScreen = document.getElementById('resultScreen');
+  const resultCard = document.getElementById('resultCard');
+  const backBtn = document.getElementById('backBtn');
+  const tabSearchBtn = document.getElementById('tabSearchBtn');
+  const tabMapBtn = document.getElementById('tabMapBtn');
+  const searchTab = document.getElementById('searchTab');
+  const mapTab = document.getElementById('mapTab');
+  let lastFoundSeatId = null;
+
+  function normalize(s){ return s.toLowerCase().trim(); }
+
+  function renderResults(query){
+    const q = normalize(query);
+    resultsEl.innerHTML = '';
+    if(q.length < 2){ return; }
+    const matches = GUESTS.filter(g => normalize(g.name).includes(q)).slice(0, 8);
+    if(matches.length === 0){
+      resultsEl.innerHTML = '<div class="no-match">No matches found. Check the spelling, or try just your first or last name.</div>';
+      return;
+    }
+    matches.forEach(g=>{
+      const row = document.createElement('div');
+      row.className = 'result-row';
+      row.innerHTML = '<span>'+g.name+'</span><span class="arrow">&rarr;</span>';
+      row.addEventListener('click', ()=>showResult(g));
+      resultsEl.appendChild(row);
+    });
+  }
+
+  function showResult(guest){
+    const info = GUEST_SEAT[guest.id];
+    lastFoundSeatId = SEAT_OF_GUEST[guest.id] || null;
+    if(info){
+      resultCard.innerHTML =
+        '<p class="guest-name">'+guest.name+'</p>'+
+        '<p class="table-num">Table '+info.table+'</p>'+
+        '<span class="table-side">'+info.side+'</span>';
+    } else {
+      resultCard.innerHTML =
+        '<p class="guest-name">'+guest.name+'</p>'+
+        '<p class="not-seated">We don\'t have a seat assignment for you just yet — please check with a member of the wedding party.</p>';
+    }
+    searchScreen.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
+  }
+
+  function switchTab(which){
+    if(which === 'map'){
+      mapTab.classList.remove('hidden');
+      searchTab.classList.add('hidden');
+      tabMapBtn.classList.add('active');
+      tabSearchBtn.classList.remove('active');
+      if(!chartBuilt) buildGuestChart(); else renderGuestSeats();
+    } else {
+      searchTab.classList.remove('hidden');
+      mapTab.classList.add('hidden');
+      tabSearchBtn.classList.add('active');
+      tabMapBtn.classList.remove('active');
+    }
+  }
+
+  tabSearchBtn.addEventListener('click', ()=>switchTab('search'));
+  tabMapBtn.addEventListener('click', ()=>switchTab('map'));
+
+  searchInput.addEventListener('input', e => renderResults(e.target.value));
+  backBtn.addEventListener('click', ()=>{
+    resultScreen.classList.add('hidden');
+    searchScreen.classList.remove('hidden');
+    searchInput.value = '';
+    resultsEl.innerHTML = '';
+    searchInput.focus();
+  });
+</script>
+</body>
+</html>
